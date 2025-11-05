@@ -1,0 +1,182 @@
+app:
+  mode: workflow
+  name: マニュアル質問応答システム
+  version: 0.1.3
+
+workflow:
+  graph:
+    edges:
+      # 開始から質問分類へ
+      - source: '1731228343114'
+        target: '1731228344221'
+        data:
+          sourceType: start
+          targetType: question-classifier
+
+      # Docker質問の場合
+      - source: '1731228344221'
+        sourceHandle: '1'
+        target: '1731228345332'
+        targetHandle: target
+        data:
+          sourceType: question-classifier
+          targetType: knowledge-retrieval
+
+      # Ubuntu質問の場合
+      - source: '1731228344221'
+        sourceHandle: '2'
+        target: '1731228345333'
+        targetHandle: target
+        data:
+          sourceType: question-classifier
+          targetType: knowledge-retrieval
+
+      # Docker知識取得からLLMへ
+      - source: '1731228345332'
+        target: '1731228346443'
+        data:
+          sourceType: knowledge-retrieval
+          targetType: llm
+
+      # Ubuntu知識取得からLLMへ
+      - source: '1731228345333'
+        target: '1731228346443'
+        data:
+          sourceType: knowledge-retrieval
+          targetType: llm
+
+      # LLMから終了へ
+      - source: '1731228346443'
+        target: '1731228347554'
+        data:
+          sourceType: llm
+          targetType: end
+
+      # 分類不能な質問は直接終了へ
+      - source: '1731228344221'
+        target: '1731228347554'
+        data:
+          sourceType: question-classifier
+          targetType: end
+
+    nodes:
+      # 開始ノード
+      - id: '1731228343114'
+        data:
+          type: start
+          title: 開始
+          variables:
+            - type: text-input
+              variable: Query
+              label: 質問内容を入力してください
+              required: true
+              max_length: 1000
+
+      # 質問分類器ノード
+      - id: '1731228344221'
+        data:
+          type: question-classifier
+          title: 質問分類
+          model:
+            provider: openai
+            name: gpt-4o
+            mode: chat
+            completion_params:
+              temperature: 0.7
+          query_variable_selector:
+            - '1731228343114'
+            - Query
+          classes:
+            - id: '1'
+              name: Docker質問
+            - id: '2'
+              name: Ubuntu質問
+
+      # Docker用知識取得ノード
+      - id: '1731228345332'
+        data:
+          type: knowledge-retrieval
+          title: Docker知識取得
+          dataset_ids:
+            - 64862693-8529-4627-a20e-35b7dcb883c8
+          retrieval_mode: multiple
+          multiple_retrieval_config:
+            reranking_enable: true
+            reranking_mode: weighted_score
+            top_k: 4
+            weights:
+              vector_setting:
+                embedding_model_name: text-embedding-3-large
+                embedding_provider_name: openai
+                vector_weight: 1
+              keyword_setting:
+                keyword_weight: 0
+          query_variable_selector:
+            - '1731228343114'
+            - Query
+
+      # Ubuntu用知識取得ノード
+      - id: '1731228345333'
+        data:
+          type: knowledge-retrieval
+          title: Ubuntu知識取得
+          dataset_ids:
+            - 84782981-6a4d-4d19-9189-dd72fe435a57
+          retrieval_mode: multiple
+          multiple_retrieval_config:
+            reranking_enable: true
+            reranking_mode: weighted_score
+            top_k: 4
+            weights:
+              vector_setting:
+                embedding_model_name: text-embedding-3-large
+                embedding_provider_name: openai
+                vector_weight: 1
+              keyword_setting:
+                keyword_weight: 0
+          query_variable_selector:
+            - '1731228343114'
+            - Query
+
+      # LLMノード
+      - id: '1731228346443'
+        data:
+          type: llm
+          title: 回答生成
+          model:
+            provider: openai
+            name: gpt-4o
+            mode: chat
+            completion_params:
+              temperature: 0.7
+          prompt_template:
+            - role: system
+              id: '1731228346443-1'
+              text: '以下のコンテキストを参考に、ユーザーの質問に対して正確で分かりやすい回答を生成してください。
+回答は以下の形式で作成してください：
+
+1. 質問内容の要約
+2. 具体的な回答
+3. （必要に応じて）補足説明や注意点
+
+質問: {{#1731228343114.Query#}}'
+          context:
+            enabled: true
+            variable_selector:
+              - '1731228343114'
+              - Query
+
+      # 終了ノード
+      - id: '1731228347554'
+        data:
+          type: end
+          title: 終了
+          outputs:
+            - value_selector:
+                - '1731228343114'
+                - Query
+              variable: inputQuery
+            - value_selector:
+                - '1731228346443'
+                - text
+              variable: generatedAnswer

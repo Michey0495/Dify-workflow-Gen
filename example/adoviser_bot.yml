@@ -1,0 +1,353 @@
+app:
+  mode: workflow
+  name: タスク分析アドバイザー
+  version: 0.1.3
+
+workflow:
+  graph:
+    edges:
+      # 開始 → 質問分類器
+      - source: '1731228343114'
+        target: '1731228343115'
+        data:
+          sourceType: start
+          targetType: question-classifier
+
+      # 質問分類器 → LLM（プロジェクト管理）
+      - source: '1731228343115'
+        sourceHandle: '1'
+        target: '1731228343116'
+        targetHandle: target
+        data:
+          sourceType: question-classifier
+          targetType: llm
+
+      # 質問分類器 → LLM（技術開発）
+      - source: '1731228343115'
+        sourceHandle: '2'
+        target: '1731228343117'
+        targetHandle: target
+        data:
+          sourceType: question-classifier
+          targetType: llm
+
+      # 質問分類器 → LLM（顧客対応）
+      - source: '1731228343115'
+        sourceHandle: '3'
+        target: '1731228343118'
+        targetHandle: target
+        data:
+          sourceType: question-classifier
+          targetType: llm
+
+      # 各LLM → Variable Aggregator
+      - source: '1731228343116'
+        target: '1731228343119'
+        data:
+          sourceType: llm
+          targetType: variable-aggregator
+      - source: '1731228343117'
+        target: '1731228343119'
+        data:
+          sourceType: llm
+          targetType: variable-aggregator
+      - source: '1731228343118'
+        target: '1731228343119'
+        data:
+          sourceType: llm
+          targetType: variable-aggregator
+
+      # Variable Aggregator → IF/ELSE
+      - source: '1731228343119'
+        target: '1731228343120'
+        data:
+          sourceType: variable-aggregator
+          targetType: if-else
+
+      # IF/ELSE → テンプレート（Manager用）
+      - source: '1731228343120'
+        target: '1731228343121'
+        data:
+          sourceType: if-else
+          targetType: template-transform
+        sourceHandle: 'true'
+
+      # IF/ELSE → テンプレート（Staff用）
+      - source: '1731228343120'
+        target: '1731228343122'
+        data:
+          sourceType: if-else
+          targetType: template-transform
+        sourceHandle: 'false'
+
+      # テンプレート → パラメータ抽出（共通）
+      - source: '1731228343121'
+        target: '1731228343123'
+        data:
+          sourceType: template-transform
+          targetType: parameter-extractor
+      - source: '1731228343122'
+        target: '1731228343123'
+        data:
+          sourceType: template-transform
+          targetType: parameter-extractor
+
+      # パラメータ抽出 → 応答
+      - source: '1731228343123'
+        target: '1731228343124'
+        data:
+          sourceType: parameter-extractor
+          targetType: answer
+
+    nodes:
+      # 開始ノード
+      - id: '1731228343114'
+        data:
+          type: start
+          title: タスク情報入力
+          variables:
+            - type: paragraph
+              variable: task_content
+              label: タスク内容
+              required: true
+              max_length: 1000
+            - type: select
+              variable: position
+              label: ポジション
+              required: true
+              options:
+                - manager
+                - staff
+
+      # 質問分類器ノード
+      - id: '1731228343115'
+        data:
+          type: question-classifier
+          title: タスク分類
+          model:
+            provider: openai
+            name: gpt-4o
+            mode: chat
+            completion_params:
+              temperature: 0.3
+          query_variable_selector:
+            - '1731228343114'
+            - task_content
+          classes:
+            - id: '1'
+              name: プロジェクト管理
+            - id: '2'
+              name: 技術開発
+            - id: '3'
+              name: 顧客対応
+
+      # LLMノード（プロジェクト管理）
+      - id: '1731228343116'
+        data:
+          type: llm
+          title: プロジェクト管理アドバイス
+          model:
+            provider: openai
+            name: gpt-4o
+            mode: chat
+            completion_params:
+              temperature: 0.7
+          prompt_template:
+            - id: 'prompt1'
+              role: system
+              text: 'プロジェクト管理に関する以下のタスクについて、具体的なアドバイスを提供してください：{{#1731228343114.task_content#}}'
+          context:
+            enabled: true
+            variable_selector:
+              - '1731228343114'
+              - task_content
+          vision:
+            enabled: false
+
+      # LLMノード（技術開発）
+      - id: '1731228343117'
+        data:
+          type: llm
+          title: 技術開発アドバイス
+          model:
+            provider: openai
+            name: gpt-4o
+            mode: chat
+            completion_params:
+              temperature: 0.7
+          prompt_template:
+            - id: 'prompt2'
+              role: system
+              text: '技術開発に関する以下のタスクについて、技術的な観点からアドバイスを提供してください：{{#1731228343114.task_content#}}'
+          context:
+            enabled: true
+            variable_selector:
+              - '1731228343114'
+              - task_content
+          vision:
+            enabled: false
+
+      # LLMノード（顧客対応）
+      - id: '1731228343118'
+        data:
+          type: llm
+          title: 顧客対応アドバイス
+          model:
+            provider: openai
+            name: gpt-4o
+            mode: chat
+            completion_params:
+              temperature: 0.7
+          prompt_template:
+            - id: 'prompt3'
+              role: system
+              text: '顧客対応に関する以下のタスクについて、顧客満足度を重視したアドバイスを提供してください：{{#1731228343114.task_content#}}'
+          context:
+            enabled: true
+            variable_selector:
+              - '1731228343114'
+              - task_content
+          vision:
+            enabled: false
+
+      # Variable Aggregatorノード
+      - id: '1731228343119'
+        data:
+          type: variable-aggregator
+          title: アドバイス集約
+          output_type: string
+          variables:
+            - - '1731228343116'
+              - text
+            - - '1731228343117'
+              - text
+            - - '1731228343118'
+              - text
+
+      # IF/ELSEノード
+      - id: '1731228343120'
+        data:
+          type: if-else
+          title: ポジション判定
+          cases:
+            - case_id: 'true'
+              logical_operator: and
+              conditions:
+                - id: 'cond1'
+                  varType: string
+                  variable_selector:
+                    - '1731228343114'
+                    - position
+                  comparison_operator: is
+                  value: manager
+
+      # テンプレート変換ノード（Manager用）
+      - id: '1731228343121'
+        data:
+          type: template-transform
+          title: Manager向けフォーマット
+          template: |
+            ## マネージャー向けタスクアドバイス
+
+            ### 概要
+            タスク内容：{{ task_content }}
+
+            ### 詳細アドバイス
+            {{ advice }}
+
+            ### アクションアイテム
+            1. チーム編成の検討
+            2. リソース配分の最適化
+            3. スケジュール管理
+            4. リスク分析
+          variables:
+            - value_selector:
+                - '1731228343114'
+                - task_content
+              variable: task_content
+            - value_selector:
+                - '1731228343119'
+                - output
+              variable: advice
+
+      # テンプレート変換ノード（Staff用）
+      - id: '1731228343122'
+        data:
+          type: template-transform
+          title: Staff向けフォーマット
+          template: |
+            ## スタッフ向けタスクアドバイス
+
+            ### タスク内容
+            {{ task_content }}
+
+            ### アドバイス要点
+            {{ advice }}
+
+            ### 次のステップ
+            1. 必要なスキル確認
+            2. タイムライン作成
+            3. 上司への報告準備
+          variables:
+            - value_selector:
+                - '1731228343114'
+                - task_content
+              variable: task_content
+            - value_selector:
+                - '1731228343119'
+                - output
+              variable: advice
+
+      # パラメータ抽出ノード
+      - id: '1731228343123'
+        data:
+          type: parameter-extractor
+          title: レスポンス解析
+          query:
+            - '1731228343121'
+            - output
+          model:
+            provider: openai
+            name: gpt-4o
+            mode: chat
+            completion_params:
+              temperature: 0.3
+          reasoning_mode: prompt
+          parameters:
+            - name: priority_level
+              type: select
+              description: タスクの優先度
+              required: true
+              options:
+                - 高
+                - 中
+                - 低
+            - name: estimated_time
+              type: string
+              description: 推定所要時間
+              required: true
+            - name: key_points
+              type: array[string]
+              description: 主要なポイント
+              required: true
+          instruction: |
+            提供されたアドバイスから以下の情報を抽出してください：
+            1. タスクの優先度
+            2. 推定される所要時間
+            3. 重要なポイント（箇条書き）
+
+      # 応答ノード
+      - id: '1731228343124'
+        data:
+          type: answer
+          title: 最終レスポンス
+          answer: |
+            {{#1731228343121.output#}}
+            {{#1731228343122.output#}}
+
+            追加分析：
+            優先度: {{#1731228343123.priority_level#}}
+            推定所要時間: {{#1731228343123.estimated_time#}}
+
+            重要ポイント：
+            {{#1731228343123.key_points#}}

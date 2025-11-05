@@ -1,0 +1,90 @@
+app:
+  mode: workflow
+  name: Googleメール自動返信下書き作成
+  version: 0.1.3
+workflow:
+  graph:
+    edges:
+      - data:
+          sourceType: start
+          targetType: llm
+        source: '1732439120841'
+        target: '1732439126453'
+      - data:
+          sourceType: llm
+          targetType: end
+        source: '1732439126453'
+        target: '1732439123899'
+    nodes:
+      - data:
+          title: 開始
+          type: start
+          variables:
+            - label: 差出人
+              max_length: 100
+              options: []
+              required: true
+              type: text-input
+              variable: from_address
+            - label: 件名
+              max_length: 200
+              options: []
+              required: true
+              type: text-input
+              variable: subject
+            - label: 本文
+              max_length: 4000
+              options: []
+              required: true
+              type: paragraph
+              variable: body
+        id: '1732439120841'
+      - data:
+          context:
+            enabled: true
+            variable_selector:
+              - '1732439120841'
+              - body
+          model:
+            completion_params:
+              temperature: 0.7
+            mode: chat
+            name: gpt-4o
+            provider: openai
+          prompt_template:
+            - id: prompt_1
+              role: system
+              text: |
+                'あなたは優秀なビジネスアシスタントです。
+                以下のメール情報に基づいて、丁寧かつ簡潔な返信メールの下書きを作成してください。
+
+                # 元のメール情報
+                - 差出人: {{#1732439120841.from_address#}}
+                - 件名: {{#1732439120841.subject#}}
+                - 本文: 
+                ---
+                {{#1732439120841.body#}}
+                ---
+
+                # 作成する下書きの要件
+                - 件名は元の件名の先頭に「Re: 」を付けてください。
+                - 本文は、まず相手の名前を記載し、連絡への感謝を述べた後、用件に対する返信を記述してください。
+                - 最後にあなたの名前（例：鈴木）で締めくくってください。'
+          title: 返信下書き作成
+          type: llm
+          vision:
+            enabled: false
+        id: '1732439126453'
+      - data:
+          outputs:
+            - variable: generated_draft
+              value_selector:
+                - '1732439126453'
+                - text
+            - variable: original_subject
+              value_selector:
+                - '1732439120841'
+                - subject
+          title: 終了
+          type: end
+        id: '1732439123899'
