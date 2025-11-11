@@ -31,7 +31,8 @@ Author：michey0495(2025.11)
 
 ## 使用方法
 
-1. リポジトリを取得してください。
+本フォルダをダウンロード・解答します。
+リポジトリURLは以下
 
 ```
 https://github.com/michey0495/Dify-workflow-Gen.git
