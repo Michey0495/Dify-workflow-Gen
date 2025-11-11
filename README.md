@@ -1,6 +1,6 @@
 # Dify-workflow-Gen
 
-Author：michey0495
+Author：michey0495(2025.11)
 
 ## 概要
 
@@ -41,7 +41,7 @@ https://github.com/michey0495/Dify-workflow-Gen.git
    インポート後は以下のような画面になります。
    ![Dify-workflow-Gen](./images/DifyWorkflowGenerator_initial.jpg)
 
-*注意事項*: このプロンプトは、claude-3-5-sonnet　以上のClaudeファミリーモデル で実行してください。gpt-4o などではワークフローが正しく生成されません。
+*注意事項*: このプロンプトは、使用可能なモデルの中で高性能なモデル(GPT5, 4.1、Claude4.0、Gemini2.5PRO など)を選択し、実行してください。性能の低いモデルだとうまく生成されない場合があります。
 
 3. 必要な情報をご用意ください：
 
@@ -239,48 +239,13 @@ example/adoviser_bot.yml
   - 一部のドメインでアクセス制限の可能性
   - 検索深度による処理時間の違いに注意
 
-## difyDslGenCheck.pyについて
-
-*注意*: 本機能は実験的な機能のため、ワークフローの生成に失敗する可能性が多分にあります。Difyのワークフロー生成機能を利用して下さい。
-
-### 機能
-
-- ワークフローの概要を元に、DSLファイルを生成する。
-- 生成したDSLファイルの構造が正しいかチェックする。
-- チェック結果を元に、DSLファイルを修正する。
-
-### 使用方法
-
-1. difyDslGenCheck.pyに生成したいワークフローの概要を記述して下さい。
-
-```python
-    wanted_workflow = """
-    プロンプト：
-    目的：旅行コンシェルジェのように旅行先の目的地の情報を調査するためのツール
-    1. 入力情報として、旅行先の地名を入力してもらう。
-    2. インターネットを検索し、旅行先の観光情報やグルメ情報が書かれたURLを3つ入手する。
-    3. 3つのURLから情報を取得する。3つは並列に処理すること。
-    4. 3つのURLから得た情報をLLに入力し、良好先の情報を整理して出力する。出力は、旅行情報雑誌に掲載できる文章に仕上げること。
-    """
-```
-
-2. スクリプトを実行して下さい。
-
-```bash
-export ANTHROPIC_API_KEY="your_anthropic_api_key"
-python -m venv dify_env
-source dify_env/bin/activate
-pip install -r requirements.txt
-python difyDslGenCheck.py
-```
-
 ## ライセンス
 
 MITライセンス
 
 ## 貢献について
 
-プルリクエストや課題の報告を歓迎します。
+RPや課題の報告はGithubより受け付けております。
 
 ## 関連リンク
 
